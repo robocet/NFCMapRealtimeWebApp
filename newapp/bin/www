@@ -1,0 +1,38 @@
+#!/usr/bin/env node
+var debug = require('debug')('newapp');
+var app = require('../app');
+const redis = require('redis');
+
+app.set('port', process.env.PORT || 3000);
+
+var io = require('socket.io');
+var server = require('http').createServer(app);
+var socket  = io.listen(server);
+
+server.listen(app.get('port'), function(){
+  console.log('Express server listening on port ' + app.get('port'));
+});
+
+   
+socket.on('connection', function(client) {
+
+    const subscribe = redis.createClient('6379','localhost');
+    subscribe.subscribe('robocet_channel'); //    listen to messages from channel robocet
+    subscribe.on("message", function(channel, message) {
+        
+        message = JSON.parse(message);
+        // console.log(message);
+        // //client.emit('message',message);
+        client.emit('message',message);                    
+    });   
+
+
+    client.on('message', function(msg) {
+        console.log('Client Connected')
+    });
+
+    client.on('disconnect', function() {
+      console.log('Client disconnected');
+        subscribe.quit();
+    });
+});
